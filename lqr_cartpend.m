@@ -13,19 +13,13 @@ A = [0 1 0 0;
     0 0 0 1;
     0 -s*d/(M*L) -s*(m+M)*g/(M*L) 0];
 
-
-
 B = [0; 1/M; 0; s*1/(M*L)];
-eig(A)
 
 Q = [1 0 0 0;
     0 1 0 0;
     0 0 10 0;
     0 0 0 100];
 R = .0001;
-
-%%
-det(ctrb(A,B))
 
 %%
 K = lqr(A,B,Q,R);
@@ -43,7 +37,5 @@ else
 end
 
 for k=1:100:length(t)
-    drawcartpend_bw(y(k,:),m,M,L);
+    drawcartpend(y(k,:),m,M,L);
 end
-
-% function dy = pendcart(y,m,M,L,g,d,u)
