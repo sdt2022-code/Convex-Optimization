@@ -47,6 +47,7 @@ if controller_type == "LQR"
     for i = 1:n
         y_t(i,:) = y';
         u_t(i) = LQR_controller(K, y, yd);
+        % u_t(i) = clamp(u_t(i), -10, 10);
         dy = cartpend(y, m, M, L, g, d, u_t(i));
         y = y + dy*dt;
     end
@@ -75,3 +76,7 @@ plot(tspan,u_t)
 title("Input Value Over Time")
 xlabel("Time [s]")
 ylabel("Force on cart [N]")
+
+function y = clamp(x, l, u)
+    y = min(max(x,l), u);
+end
