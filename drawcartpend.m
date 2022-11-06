@@ -38,7 +38,7 @@ rectangle('Position',[px-mr/2,py-mr/2,mr,mr],'Curvature',1,'FaceColor',[.1 0.1 1
 % set(gca,'XTick',[])
 xlim([-5 5]);
 ylim([-2 2.5]);
-set(gcf,'Position',[100 550 1000 400])
+% set(gcf,'Position',[100 550 1000 400])
 % box off
 drawnow
 hold off
