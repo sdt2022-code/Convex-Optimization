@@ -1,0 +1,138 @@
+%% Control of an Inverted Pendulum on a Cart
+
+%%
+% This plant is modeled in Simulink with commonly used blocks.
+mdlPlant = 'mpc_pendcartPlant';
+load_system(mdlPlant)
+open_system([mdlPlant '/Pendulum and Cart System'],'force')
+
+%% Control Objectives
+% Assume the following initial conditions for the cart/pendulum assembly:
+%
+% * The cart is stationary at _x_ = |0|.
+%
+% * The inverted pendulum is stationary at the upright position
+% _theta_ = |0|.
+%
+% The control objectives are:
+%
+% * Cart can be moved to a new position between |-10| and |10| with a step
+% setpoint change.
+%
+% * When tracking such a setpoint change, the rise time should be less than
+% 4 seconds (for performance) and the overshoot should be less than |5|
+% percent (for robustness).
+%
+% * When an impulse disturbance of magnitude of |2| is applied to the
+% pendulum, the cart should return to its original position with a maximum
+% displacement of |1|. The pendulum should also return to the upright
+% position with a peak angle displacement of |15| degrees (|0.26| radian).
+
+%% Control Structure
+mdlMPC = 'mpc_pendcartImplicitMPC';
+open_system(mdlMPC)
+
+%% Linear Plant Model
+% Since the MPC controller requires a linear time-invariant (LTI) plant
+% model for prediction, linearize the Simulink plant model at the initial
+% operating point.
+%
+% Specify linearization input and output points.
+io(1) = linio([mdlPlant '/dF'],1,'openinput');
+io(2) = linio([mdlPlant '/F'],1,'openinput');
+io(3) = linio([mdlPlant '/Pendulum and Cart System'],1,'openoutput');
+io(4) = linio([mdlPlant '/Pendulum and Cart System'],3,'openoutput');
+
+%%
+% Create operating point specifications for the plant initial conditions.
+opspec = operspec(mdlPlant);
+
+%%
+% The first state is cart position _x_, which has a known initial state of
+% 0.
+opspec.States(1).Known = true;
+opspec.States(1).x = 0;
+
+%%
+% The third state is pendulum angle _theta_, which has a known initial
+% state of 0.
+opspec.States(3).Known = true;
+opspec.States(3).x = 0;
+
+%%
+% Compute operating point using these specifications.
+options = findopOptions('DisplayReport',false);
+op = findop(mdlPlant,opspec,options);
+
+%%
+% Obtain the linear plant model at the specified operating point.
+plant = linearize(mdlPlant,op,io);
+plant.InputName = {'dF';'F'};
+plant.OutputName = {'x';'theta'};
+
+bdclose(mdlPlant)
+
+%% MPC Design
+% The plant has two inputs, _dF_ and _F_, and two outputs, _x_ and _theta_.
+% In this example, _dF_ is specified as an unmeasured disturbance used by
+% the MPC controller for better disturbance rejection. Set the plant
+% signal types.
+plant = setmpcsignals(plant,'ud',1,'mv',2);
+
+%%
+% To control an unstable plant, the controller sample time cannot be too
+% large (poor disturbance rejection) or too small (excessive computation
+% load). Similarly, the prediction horizon cannot be too long (the plant
+% unstable mode would dominate) or too short (constraint violations would
+% be unforeseen). Use the following parameters for this example:
+Ts = 0.01;
+PredictionHorizon = 50;
+ControlHorizon = 5;
+mpcobj = mpc(plant,Ts,PredictionHorizon,ControlHorizon);
+
+%%
+% There is a limitation on how much force can be applied to the cart, which
+% is specified as hard constraints on manipulated variable _F_.
+mpcobj.MV.Min = -50;
+mpcobj.MV.Max = 50;
+
+%%
+% It is good practice to scale plant inputs and outputs before designing
+% weights. In this case, since the range of the manipulated variable is
+% greater than the range of the plant outputs by two orders of magnitude,
+% scale the MV input by |100|.
+mpcobj.MV.ScaleFactor = 100;
+
+%%
+% To improve controller robustness, increase the weight on the MV rate of
+% change from |0.1| to |1|.
+mpcobj.Weights.MVRate = 1;
+
+%%
+% To achieve balanced performance, adjust the weights on the plant outputs.
+% The first weight is associated with cart position _x_ and the second
+% weight is associated with angle _theta_.
+mpcobj.Weights.OV = [1.2 1];
+
+%%
+% To achieve more aggressive disturbance rejection, increase the state
+% estimator gain by multiplying the default disturbance model gains by a
+% factor of |10|.
+%
+% Update the input disturbance model.
+disturbance_model = getindist(mpcobj);
+setindist(mpcobj,'model',disturbance_model*10);
+
+%%
+% Update the output disturbance model.
+disturbance_model = getoutdist(mpcobj);
+setoutdist(mpcobj,'model',disturbance_model*10);
+
+%% Closed-Loop Simulation
+% Validate the MPC design with a closed-loop simulation in Simulink.
+open_system([mdlMPC '/Scope'])
+sim(mdlMPC)
+
+%%
+% Close the Simulink model.
+% bdclose(mdlMPC)
