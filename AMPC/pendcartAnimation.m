@@ -49,7 +49,6 @@ switch flag,
   %%%%%%%%%%
   case 'Slider',
     LocalSlider
-  
   %%%%%%%%%
   % Close %
   %%%%%%%%%
