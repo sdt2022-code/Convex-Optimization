@@ -49,7 +49,7 @@ if controller_type == "LQR"
     for i = 1:n
         y_t(i,:) = y';
         u_t(i) = LQR_controller(K, y, yd);
-        u_t(i) = clamp(u_t(i), -50, 50);
+%         u_t(i) = clamp(u_t(i), -50, 50);
         dy = cartpend(y, m, M, L, g, d, u_t(i));
         y = y + dy*dt;
     end
