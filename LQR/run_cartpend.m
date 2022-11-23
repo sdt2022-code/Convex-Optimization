@@ -25,7 +25,7 @@ y0 = [0; 0; pi; 0];
 yd = [10; 0; pi; 0];
 yd_extended = zeros(n, 4);
 for i = 1:n
-    yd_extended(i,:) = yd';
+    yd_extended(i,:) = yd' - [0 0 pi 0];
 end
 
 controller_type = "LQR";
@@ -47,7 +47,7 @@ if controller_type == "LQR"
     
     % simulate controller
     for i = 1:n
-        y_t(i,:) = y';
+        y_t(i,:) = y' - [0 0 0 0];
         u_t(i) = LQR_controller(K, y, yd);
 %         u_t(i) = clamp(u_t(i), -50, 50);
         dy = cartpend(y, m, M, L, g, d, u_t(i));
@@ -93,12 +93,13 @@ end
 
 %% Plot States
 figure()
-plot(tspan,y_t)
+plot(tspan,y_t- pi * [zeros(n,2) ones(n,1) zeros(n,1)])
 hold on
 plot(tspan, yd_extended, '--')
 title("Pendulum State Over Time")
 xlabel("Time [s]")
 ylabel("State, Units = [m, m/s, rad, rad/s]")
+axis([0 10 -6 12])
 legend(["Position", "Velocity", "Angle", "Angular Velocity", ...
         "Desired Position", "Desired Velocity", "Desired Angle", "Designed Angular Velocity"])
 
